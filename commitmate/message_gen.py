@@ -31,3 +31,41 @@ CHANGED FILES:
 {diff}
 --- END DIFF ---
 """.strip()
+
+
+
+def clean_response(raw: str) -> str:
+    """
+    Strips common LLM output cruft: markdown code fences, wrapping quotes,
+    and a small set of known preamble phrases.
+    """
+    text = raw.strip()
+
+    lines = text.splitlines()
+
+    # Strip an opening fence line, e.g. ``` or ```text or ```bash
+    if lines and lines[0].strip().startswith("```"):
+        lines = lines[1:]
+
+    # Strip a closing fence line, if the last line is just ```
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]
+
+    text = "\n".join(lines).strip()
+
+    # Strip a known preamble phrase if it's the whole first line
+    known_preambles = [
+        "here's your commit message:",
+        "here is your commit message:",
+        "commit message:",
+    ]
+    lines = text.splitlines()
+    if lines and lines[0].strip().lower().rstrip(":") + ":" in known_preambles:
+        lines = lines[1:]
+    text = "\n".join(lines).strip()
+
+    # Strip wrapping quotes around the entire message
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in ('"', "'"):
+        text = text[1:-1].strip()
+
+    return text
