@@ -32,10 +32,6 @@ def get_staged_diff():
     return result.stdout
     
 
-
-
-
-
 def get_staged_files():
     """
       Runs `git diff --staged --name-only` and returns a list of changed file paths.

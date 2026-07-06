@@ -27,3 +27,16 @@ class GitNotInstalledError(CommitMateError):
     """Raised when the git executable can't be found on PATH."""
     def __init__(self, message="Git is not installed or not found on PATH."):
         super().__init__(message)
+
+
+
+# Ollama Errors
+class OllamaConnectionError(CommitMateError):
+    """ Raised when the Ollama is not running at all"""
+    def __init__(self, message="Ollama is not running"):
+        super().__init__(message)
+
+class OllamaTimeoutError(CommitMateError):
+    """ Raised when the Ollama connection timed out"""
+    def __init__(self, message="Connection timed out, Ollama taking too long to respond"):
+        super().__init__(message)
