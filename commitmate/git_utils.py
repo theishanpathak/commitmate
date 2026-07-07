@@ -53,3 +53,15 @@ def get_staged_files():
     
     return result.stdout.strip().splitlines()
     
+
+def git_commit(message: str):
+    """Runs 'git commit -m ...' with the approved message."""
+    try:
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            capture_output=True,
+            text= True,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise GitCommandError(e.stderr.strip()) from e

@@ -5,7 +5,7 @@ from commitmate.exceptions import (
 )
 
 
-def generate_commit_message(prompt: str, model: str = "llama3", timeout: int = 30):
+def generate_commit_message(prompt: str, model: str = "llama3", timeout: int = 30) -> str:
 
     url = "http://localhost:11434/api/generate"
 
