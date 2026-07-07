@@ -12,6 +12,7 @@ def generate_commit_message(prompt: str, model: str = "llama3", timeout: int = 3
     payload = {
         "model": model,
         "prompt": prompt,
+        "format" : "json",
         "stream": False
     }
 

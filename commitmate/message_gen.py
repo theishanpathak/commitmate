@@ -1,3 +1,7 @@
+import json
+from commitmate.exceptions import InvalidModelResponseError
+
+
 COMMIT_TYPES = ["feat", "fix", "docs", "refactor", "test", "chore", "style", "perf"]
 
 
@@ -9,20 +13,13 @@ def build_prompt(diff: str, files: list[str]) -> str:
 
     return f"""You are a senior software engineer writing a git commit message.
 
-Generate a commit message in Conventional Commits format based on the staged changes below.
+Analyze the staged changes below and respond with a JSON object with exactly these keys:
+- "type": one of {types_list}
+- "scope": a short noun for what part of the code changed (e.g. a filename or module), or an empty string if no single scope fits
+- "description": a short, lowercase, imperative-mood summary (e.g. "add" not "added"), no trailing period, under 72 characters
+- "body": 1-3 short bullet points (as a single string, newline-separated) explaining WHY the change was made, or an empty string if not needed
 
-FORMAT (strict):
-<type>(<scope>): <short description>
-
-RULES:
-- <type> must be exactly one of: {types_list}
-- <scope> is a short noun describing what part of the code changed (e.g. a filename, module, or feature). Omit the scope and parentheses entirely if no single scope fits.
-- <short description> is lowercase, imperative mood (e.g. "add" not "added"), no period at the end, under 72 characters.
-- Optionally, after the first line, you may add a blank line followed by 1-3 short bullet points explaining WHY the change was made, if the diff makes that clear.
-
-OUTPUT CONSTRAINTS (strict):
-- Output ONLY the commit message. No markdown code fences (no ```). No quotes wrapping the message. No preamble like "Here's your commit message:" or explanation after it.
-- If you are unsure of the type, pick the closest match rather than inventing a new type.
+Respond with ONLY the JSON object. No markdown fences, no explanation, no text outside the JSON.
 
 CHANGED FILES:
 {file_list}
@@ -33,39 +30,54 @@ CHANGED FILES:
 """.strip()
 
 
-
 def clean_response(raw: str) -> str:
     """
-    Strips common LLM output cruft: markdown code fences, wrapping quotes,
-    and a small set of known preamble phrases.
+    Strips markdown code fences that Ollama sometimes adds even with format=json.
     """
     text = raw.strip()
-
     lines = text.splitlines()
 
-    # Strip an opening fence line, e.g. ``` or ```text or ```bash
     if lines and lines[0].strip().startswith("```"):
         lines = lines[1:]
-
-    # Strip a closing fence line, if the last line is just ```
     if lines and lines[-1].strip().startswith("```"):
         lines = lines[:-1]
 
-    text = "\n".join(lines).strip()
+    return "\n".join(lines).strip()
 
-    # Strip a known preamble phrase if it's the whole first line
-    known_preambles = [
-        "here's your commit message:",
-        "here is your commit message:",
-        "commit message:",
-    ]
-    lines = text.splitlines()
-    if lines and lines[0].strip().lower().rstrip(":") + ":" in known_preambles:
-        lines = lines[1:]
-    text = "\n".join(lines).strip()
+def parse_model_response(cleaned: str) -> dict:
+    """
+    Parses the cleaned JSON string into a dict and validates required fields.
+    Raises InvalidModelResponseError if parsing fails or fields are missing/invalid.
+    """
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        raise InvalidModelResponseError(f"Model did not return valid JSON: {e}") from e
 
-    # Strip wrapping quotes around the entire message
-    if len(text) >= 2 and text[0] == text[-1] and text[0] in ('"', "'"):
-        text = text[1:-1].strip()
+    if "type" not in data or "description" not in data:
+        raise InvalidModelResponseError(
+            f"Model response missing required fields 'type' or 'description': {data}"
+        )
 
-    return text
+    if data["type"] not in COMMIT_TYPES:
+        raise InvalidModelResponseError(
+            f"Model returned invalid commit type '{data['type']}'. Expected one of {COMMIT_TYPES}."
+        )
+
+    return data
+
+def assemble_commit_message(data: dict) -> str:
+    """
+    Builds the final 'type(scope): description' string (plus optional body)
+    from the parsed JSON dict. Pure string formatting, no LLM involved.
+    """
+    commit_type = data["type"]
+    scope = data.get("scope", "").strip()
+    description = data["description"].strip()
+    body = data.get("body", "").strip()
+
+    header = f"{commit_type}({scope}): {description}" if scope else f"{commit_type}: {description}"
+
+    if body:
+        return f"{header}\n\n{body}"
+    return header

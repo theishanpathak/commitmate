@@ -1,5 +1,5 @@
 from commitmate.git_utils import get_staged_diff, get_staged_files, git_commit
-from commitmate.message_gen import build_prompt, clean_response
+from commitmate.message_gen import build_prompt, clean_response, parse_model_response, assemble_commit_message
 from commitmate.ollama_client import generate_commit_message
 from commitmate.exceptions import CommitMateError
 from rich.console import Console
@@ -14,13 +14,18 @@ def main():
         files_changed = get_staged_files()
         prompt = build_prompt(codes_changed, files_changed)
         raw_commit_message = generate_commit_message(prompt)
-        commit_message = clean_response(raw_commit_message)
+        cleaned = clean_response(raw_commit_message)
+        parsed = parse_model_response(cleaned)
+        console.print(f"[dim]DEBUG parsed: {parsed}[/dim]")
+        commit_message = assemble_commit_message(parsed)
     except CommitMateError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         return
 
     while True:
         console.print("\n[bold]Generated commit message:[/bold]")
+      #   console.print(f"[cyan]{raw_commit_message}[/cyan]")
+
         console.print(f"[cyan]{commit_message}[/cyan]")
 
         choice = Prompt.ask(

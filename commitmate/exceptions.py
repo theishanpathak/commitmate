@@ -40,3 +40,8 @@ class OllamaTimeoutError(CommitMateError):
     """ Raised when the Ollama connection timed out"""
     def __init__(self, message="Connection timed out, Ollama taking too long to respond"):
         super().__init__(message)
+
+class InvalidModelResponseError(CommitMateError):
+    """Raised when the model's response isn't valid JSON or is missing required fields."""
+    def __init__(self, message):
+        super().__init__(message)

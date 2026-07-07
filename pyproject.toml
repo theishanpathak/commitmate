@@ -1,0 +1,24 @@
+[project]
+name = "commitmate"
+
+version = "0.1.0"
+
+description = "Generates Conventional Commits-style messages from staged git diffs using a local Ollama model."
+
+requires-python = ">=3.11"
+
+dependencies = [
+    "requests",
+    "rich",
+]
+
+[project.scripts]
+commitmate = "commitmate.cli:main"
+
+
+
+[build-system]
+
+requires = ["setuptools>=68"]
+
+build-backend = "setuptools.build_meta"
