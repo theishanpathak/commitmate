@@ -41,7 +41,10 @@ def main():
         codes_changed = get_staged_diff()
         files_changed = get_staged_files()
         prompt = build_prompt(codes_changed, files_changed)
-        raw_commit_message = generate_commit_message(prompt)
+
+        with console.status("[bold cyan]Generating commit message..."):
+            raw_commit_message = generate_commit_message(prompt)
+        
         cleaned = clean_response(raw_commit_message)
         parsed = parse_model_response(cleaned)
         commit_message = assemble_commit_message(parsed)
