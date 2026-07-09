@@ -4,6 +4,7 @@ from commitmate.ollama_client import generate_commit_message
 from commitmate.exceptions import CommitMateError
 from rich.console import Console
 from rich.prompt import Prompt
+from rich.markup import escape
 
 
 def main():
@@ -16,15 +17,13 @@ def main():
         raw_commit_message = generate_commit_message(prompt)
         cleaned = clean_response(raw_commit_message)
         parsed = parse_model_response(cleaned)
-        console.print(f"[dim]DEBUG parsed: {parsed}[/dim]")
         commit_message = assemble_commit_message(parsed)
     except CommitMateError as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(f"[bold red]Error:[/bold red] {escape(str(e))}")
         return
 
     while True:
         console.print("\n[bold]Generated commit message:[/bold]")
-      #   console.print(f"[cyan]{raw_commit_message}[/cyan]")
 
         console.print(f"[cyan]{commit_message}[/cyan]")
 
@@ -39,7 +38,7 @@ def main():
                 git_commit(commit_message)
                 console.print("[bold green]Committed.[/bold green]")
             except CommitMateError as e:
-                console.print(f"[bold red]Commit failed:[/bold red] {e}")
+                console.print(f"[bold red]Commit failed:[/bold red] {escape(str(e))}")
             return
 
         elif choice == "cancel":

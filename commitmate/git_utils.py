@@ -6,11 +6,33 @@ from commitmate.exceptions import (
     NoStagedChangesError
 )
 
+
+def _ensure_in_git_repo():
+    """
+    Uses `git rev-parse --is-inside-work-tree` to reliably check whether the
+    current directory is inside a git repository. This is more robust than
+    parsing `git diff`'s error text, which can vary across git versions.
+    """
+    try:
+        subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise NotAGitRepositoryError() from e
+    except FileNotFoundError as e:
+        raise GitNotInstalledError() from e
+
+
+
 def get_staged_diff():
     """
     Runs `git diff --staged` and returns the diff as a string.
     Raises NoStagedChangesError if there's nothing staged.
     """
+    _ensure_in_git_repo()
     try:
         result = subprocess.run(
             ['git', 'diff', '--staged'],
@@ -36,6 +58,7 @@ def get_staged_files():
     """
       Runs `git diff --staged --name-only` and returns a list of changed file paths.
     """
+    _ensure_in_git_repo()
     try:
         result = subprocess.run(
             ['git', 'diff', '--staged', '--name-only'], 
