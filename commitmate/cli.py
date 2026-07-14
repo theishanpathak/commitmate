@@ -1,7 +1,7 @@
 from commitmate.git_utils import get_staged_diff, get_staged_files, git_commit
 from commitmate.message_gen import build_prompt, clean_response, parse_model_response, assemble_commit_message
 from commitmate.ollama_client import generate_commit_message
-from commitmate.exceptions import CommitMateError
+from commitmate.exceptions import CommitMateError, InvalidModelResponseError
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.markup import escape
@@ -9,6 +9,10 @@ import os
 import tempfile
 import subprocess
 import shlex
+import argparse
+
+MAX_ATTEMPTS = 3
+DEFAULT_MODEL = "llama3"
 
 def edit_in_editor(initial_text: str) -> str:
     """
@@ -34,20 +38,61 @@ def edit_in_editor(initial_text: str) -> str:
 
 
 
+def generate_valid_commit_message(prompt: str, console: Console, model: str) -> dict:
+    """
+    Calls Ollama and validates the response, retrying up to MAX_ATTEMPTS times
+    if the model returns something that fails validation.
+    """
+    last_error = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        with console.status(f"[bold cyan]Generating commit message with {model} (attempt {attempt}/{MAX_ATTEMPTS})..."):
+            raw = generate_commit_message(prompt, model)
+        try:
+            cleaned = clean_response(raw)
+            parsed = parse_model_response(cleaned)
+            return parsed
+        except InvalidModelResponseError as e:
+            last_error = e
+            continue
+    raise last_error
+
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog="commitmate",
+        description="Generate a Conventional Commits-style message from staged git changes using a local Ollama model."
+    )
+    parser.add_argument(
+        "--model",
+        default=DEFAULT_MODEL,
+        help=f"Ollama model to use (default: {DEFAULT_MODEL}). Example: qwen2.5-coder:7b"
+    )
+    return parser.parse_args()
+
+
+
 def main():
     console = Console()
+    args = parse_args()
 
     try:
         codes_changed = get_staged_diff()
         files_changed = get_staged_files()
         prompt = build_prompt(codes_changed, files_changed)
-
-        with console.status("[bold cyan]Generating commit message..."):
-            raw_commit_message = generate_commit_message(prompt)
-        
-        cleaned = clean_response(raw_commit_message)
-        parsed = parse_model_response(cleaned)
+        parsed = generate_valid_commit_message(prompt, console, model=args.model)
         commit_message = assemble_commit_message(parsed)
+
+    except InvalidModelResponseError:
+        console.print(
+            "[bold red]Error:[/bold red] The model couldn't produce a well-formatted "
+            "commit message after several attempts."
+        )
+        console.print(
+            "[yellow]Tip: this often happens with diffs spanning many unrelated files. "
+            "Try staging fewer files at a time.[/yellow]"
+        )
+        return
     except CommitMateError as e:
         console.print(f"[bold red]Error:[/bold red] {escape(str(e))}")
         return
@@ -55,7 +100,7 @@ def main():
     while True:
         console.print("\n[bold]Generated commit message:[/bold]")
 
-        console.print(f"[cyan]{commit_message}[/cyan]")
+        console.print(f"[cyan]{escape(commit_message)}[/cyan]")
 
         choice = Prompt.ask(
             "Select an action",
