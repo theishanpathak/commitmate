@@ -5,7 +5,7 @@ from commitmate.exceptions import (
 )
 
 
-def generate_commit_message(prompt: str, model: str = "llama3", timeout: int = 30) -> str:
+def generate_commit_message(prompt: str, model: str = "llama3", timeout: int = 30, num_ctx: int = 8192) -> str:
 
     url = "http://localhost:11434/api/generate"
 
@@ -13,7 +13,10 @@ def generate_commit_message(prompt: str, model: str = "llama3", timeout: int = 3
         "model": model,
         "prompt": prompt,
         "format" : "json",
-        "stream": False
+        "stream": False,
+        "options": {
+            "num_ctx": num_ctx
+        }
     }
 
     try:
