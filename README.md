@@ -27,7 +27,19 @@ Writing good commit messages consistently is tedious, and generic "wip" or "fix 
 
 ## Installation
 
-Clone the repo and install it as an editable local package:
+### For users
+
+Install directly from PyPI:
+
+```bash
+pip install commitmate
+```
+
+This registers a `commitmate` command on your system, callable from any git repository.
+
+### For developers / contributors
+
+If you want to modify the source, run tests, or contribute:
 
 ```bash
 git clone https://github.com/theishanpathak/commitmate.git
@@ -35,7 +47,7 @@ cd commitmate
 pip install -e .
 ```
 
-This registers a `commitmate` command on your system, callable from any git repository.
+The `-e` (editable) install links the `commitmate` command back to your local source files, so any changes you make take effect immediately without reinstalling.
 
 ## Usage
 
@@ -94,6 +106,17 @@ If the model's response fails validation (wrong type, description too short, mal
 - `rich`
 
 (See `requirements.txt`.)
+
+## Contributing
+
+Contributions are welcome. After cloning and installing with `pip install -e .` (see Installation above), you can make changes and test them immediately with the `commitmate` command, no reinstall needed.
+
+If you want to build the distributable package yourself:
+```bash
+pip install build
+python -m build
+```
+This produces a `.whl` and `.tar.gz` in `dist/`, which you can install into a fresh virtual environment to verify the packaging is correct before opening a PR.
 
 ## Author
 
