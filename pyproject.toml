@@ -4,7 +4,7 @@ version = "1.0.1"
 description = "Generates Conventional Commits-style messages from staged git diffs using a local Ollama model."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 authors = [
     { name = "Ishan Pathak" }
 ]

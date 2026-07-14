@@ -10,7 +10,7 @@ Writing good commit messages consistently is tedious, and generic "wip" or "fix 
 
 ## Prerequisites
 
-- Python 3.11 or later
+- Python 3.9 or later
 - [Ollama](https://ollama.com/) installed and running locally
 - A model pulled in Ollama. The tool defaults to `llama3`:
   ```bash
