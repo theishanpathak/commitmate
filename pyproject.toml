@@ -1,12 +1,13 @@
 [project]
 name = "commitmate"
-
-version = "0.1.0"
-
+version = "1.0.0"
 description = "Generates Conventional Commits-style messages from staged git diffs using a local Ollama model."
-
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
-
+authors = [
+    { name = "Ishan Pathak" }
+]
 dependencies = [
     "requests",
     "rich",
@@ -15,10 +16,12 @@ dependencies = [
 [project.scripts]
 commitmate = "commitmate.cli:main"
 
-
+[project.urls]
+Homepage = "https://github.com/theishanpathak/commitmate"
 
 [build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-requires = ["setuptools>=68"]
-
-build-backend = "setuptools.build_meta"
+[tool.hatch.build.targets.wheel]
+packages = ["commitmate"]

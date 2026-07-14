@@ -47,8 +47,7 @@ Output:
   "body": ""
 }}
 [END OF EXAMPLES]
-Before writing your answer, briefly consider each changed file listed above individually. Then write ONE summary description that reflects meaningful changes across ALL of them, not just the last file.
-
+Before writing your answer, briefly consider each changed file listed above individually.
 CHANGED FILES:
 {file_list}
 
