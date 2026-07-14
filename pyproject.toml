@@ -1,6 +1,6 @@
 [project]
 name = "commitmate"
-version = "1.0.1"
+version = "1.0.2"
 description = "Generates Conventional Commits-style messages from staged git diffs using a local Ollama model."
 readme = "README.md"
 license = "MIT"
