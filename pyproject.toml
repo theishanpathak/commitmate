@@ -12,6 +12,10 @@ dependencies = [
     "requests",
     "rich",
 ]
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]
 
 [project.scripts]
 commitmate = "commitmate.cli:main"
