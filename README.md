@@ -89,7 +89,16 @@ If the model's response fails validation (wrong type, description too short, mal
   export EDITOR="code --wait"
   ```
   Without it, editors like VS Code return immediately and CommitMate will read the file back before you've finished editing.
-- **No automated test suite yet.** The pure functions in `message_gen.py` (especially `clean_response` and `parse_model_response`) are strong candidates for unit tests; this hasn't been added yet.
+
+## Testing
+
+Run the test suite with:
+```bash
+pip install -e ".[dev]"
+pytest
+```
+Tests currently cover the pure logic in `message_gen.py` (prompt cleanup, response validation, and message assembly). `git_utils.py` and `ollama_client.py` involve subprocess/network calls and aren't covered yet — mocking those is a natural next step.
+
 
 ## Configuration
 
