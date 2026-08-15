@@ -1,3 +1,4 @@
+from commitmate.config import load_config, save_config
 from commitmate.git_utils import get_staged_diff, get_staged_files, git_commit
 from commitmate.message_gen import build_prompt, clean_response, parse_model_response, assemble_commit_message
 from commitmate.ollama_client import generate_commit_message
@@ -65,8 +66,13 @@ def parse_args():
     )
     parser.add_argument(
         "--model",
-        default=DEFAULT_MODEL,
-        help=f"Ollama model to use (default: {DEFAULT_MODEL}). Example: qwen2.5-coder:7b"
+        default=None,
+        help=f"Use this model for this run only (default: {DEFAULT_MODEL}, or the repo's saved default if set)."
+    )
+    parser.add_argument(
+        "--set-model",
+        default=None,
+        help="Save this model as the default for this repository, then exit."
     )
     return parser.parse_args()
 
@@ -76,11 +82,24 @@ def main():
     console = Console()
     args = parse_args()
 
+    if args.set_model:
+        try:
+            config = load_config()
+            config["model"] = args.set_model
+            save_config(config)
+            console.print(f"[bold green]Saved '{args.set_model}' as the default model for this repo.[/bold green]")
+        except CommitMateError as e:
+            console.print(f"[bold red]Error:[/bold red] {escape(str(e))}")
+        return
+
     try:
+        config = load_config()
+        model = args.model or config.get("model") or DEFAULT_MODEL
+
         codes_changed = get_staged_diff()
         files_changed = get_staged_files()
         prompt = build_prompt(codes_changed, files_changed)
-        parsed = generate_valid_commit_message(prompt, console, model=args.model)
+        parsed = generate_valid_commit_message(prompt, console, model=model)
         commit_message = assemble_commit_message(parsed)
 
     except InvalidModelResponseError:
@@ -99,7 +118,6 @@ def main():
 
     while True:
         console.print("\n[bold]Generated commit message:[/bold]")
-
         console.print(f"[cyan]{escape(commit_message)}[/cyan]")
 
         choice = Prompt.ask(

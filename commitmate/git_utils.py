@@ -88,3 +88,14 @@ def git_commit(message: str):
         )
     except subprocess.CalledProcessError as e:
         raise GitCommandError(e.stderr.strip()) from e
+
+def get_git_dir() -> str:
+    """Returns the path to the current repo's .git directory."""
+    _ensure_in_git_repo()
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    return result.stdout.strip()
