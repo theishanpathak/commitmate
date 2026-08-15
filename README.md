@@ -79,6 +79,8 @@ A `reasoning` field is requested first in the JSON schema, before the other fiel
 
 If the model's response fails validation (wrong type, description too short, malformed JSON, etc.) after a few attempts, CommitMate shows a friendly message suggesting the diff may be too large or span too many unrelated files, rather than surfacing the raw internal validation error.
 
+Beyond basic validation, a few deterministic checks run on the assembled message before it's shown to you: a scope that looks like multiple joined file names (e.g. containing "and", commas, or a file extension) is dropped rather than shown as-is, and a scope is also dropped if including it would push the subject line past 80 characters. These exist because local models don't always follow scope-formatting instructions reliably, even with clear prompt rules and few-shot examples, so the final shape of the message is enforced in code, not just requested in the prompt.
+
 ## Known Limitations
 
 - **Multi-file diffs can produce longer subject lines.** Smaller/general-purpose local models (tested: `llama3`, the default) sometimes struggle to keep the commit description under the ~72-character convention when a diff spans multiple unrelated files. In testing, `qwen2.5-coder:7b` performed noticeably better at staying within length limits on the same diffs. Consider passing `--model qwen2.5-coder:7b` if you run into this.
@@ -103,11 +105,16 @@ Tests currently cover the pure logic in `message_gen.py` (prompt cleanup, respon
 ## Configuration
 
 - **`$EDITOR`** — controls which editor opens during the `edit` flow. Defaults to `nano` (Mac/Linux) or `notepad` (Windows) if unset.
-- **`--model`** — choose which Ollama model to use. Defaults to `llama3`:
+- **`--model`** — use a specific Ollama model for a single run, without changing your saved default:
   ```bash
   commitmate --model qwen2.5-coder:7b
   ```
   See Known Limitations above for why `qwen2.5-coder:7b` may give better results on multi-file diffs.
+- **`--set-model`** — save a model as the default for the current repository. Once set, plain `commitmate` runs will use it automatically:
+  ```bash
+  commitmate --set-model qwen2.5-coder:7b
+  ```
+  This is stored per-repo in `.git/commitmate/config.json`, so it's local to your clone and never committed or shared with collaborators. Priority order when resolving which model to use: `--model` flag (this run only) → saved repo config → built-in default (`llama3`).
 
 ## Requirements
 
