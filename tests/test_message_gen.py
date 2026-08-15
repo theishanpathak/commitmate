@@ -1,6 +1,6 @@
 import pytest
 
-from commitmate.message_gen import clean_response, parse_model_response, assemble_commit_message
+from commitmate.message_gen import clean_response, parse_model_response, assemble_commit_message, _is_bad_scope
 from commitmate.exceptions import InvalidModelResponseError
 
 
@@ -99,4 +99,39 @@ def test_assemble_commit_message_without_body():
     data = {"type": "feat", "scope": "api", "description": "add new endpoint", "body": ""}
     result = assemble_commit_message(data)
     assert result == "feat(api): add new endpoint"
+
+
+def test_assemble_commit_message_drops_bad_scope():
+    """A scope containing 'and' (multiple joined files) should be dropped entirely."""
+    data = {"type": "feat", "scope": "app and utils", "description": "add greeting functions", "body": ""}
+    result = assemble_commit_message(data)
+    assert result == "feat: add greeting functions"
+
+
+def test_assemble_commit_message_drops_overlong_header():
+    """A long-but-valid single-word scope should be dropped if it pushes the header past 80 chars."""
+    data = {
+        "type": "feat",
+        "scope": "authentication",
+        "description": "add comprehensive multi-factor authentication support for enterprise users",
+        "body": ""
+    }
+    result = assemble_commit_message(data)
+    assert "(authentication)" not in result
+    assert result.startswith("feat: ")
+
+
+
+def test_is_bad_scope_detects_and():
+    assert _is_bad_scope("app and utils") is True
+
+def test_is_bad_scope_detects_file_extension():
+    assert _is_bad_scope("cli.py") is True
+
+def test_is_bad_scope_detects_slash():
+    assert _is_bad_scope("cli/auth/focus") is True
+
+def test_is_bad_scope_accepts_single_word():
+    assert _is_bad_scope("auth") is False
+
 
