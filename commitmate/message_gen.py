@@ -1,15 +1,29 @@
 import json
+import re
 from commitmate.exceptions import InvalidModelResponseError
 
 
 COMMIT_TYPES = ["feat", "fix", "docs", "refactor", "test", "chore", "style", "perf"]
+
+_BAD_SCOPE_PATTERN = re.compile(
+    r"(\band\b|,|/|\.(py|js|ts|jsx|tsx|json|md|txt|html|css)\b)",
+    re.IGNORECASE
+)
+
+def _is_bad_scope(scope: str) -> bool:
+    """
+    Flags a scope as invalid if it looks like multiple joined items rather than a single noun"""
+    if _BAD_SCOPE_PATTERN.search(scope):
+        return True
+    if len(scope.split()) > 2:
+        return True
+    return False
 
 
 def build_prompt(diff: str, files: list[str]) -> str:
     """Constructs the full prompt sent to Ollama for commit message generation."""
 
     file_list = "\n".join(f"- {f}" for f in files)
-    types_list = ", ".join(COMMIT_TYPES)
 
     return f"""You are an expert software engineer writing a Conventional Git Commit message.
 
@@ -18,8 +32,17 @@ Your task is to analyze the staged changes below and output a single JSON object
 CRITICAL RULES:
 1. Output ONLY valid JSON. Do not include markdown code blocks (```), introductory text, or explanations.
 2. "reasoning": briefly note, in one short sentence, what the key change is across all files. This is scratch space to help you think before answering, keep it under 15 words.
-3. "type": must be exactly one of {types_list}.
-4. "scope": a short noun for the changed module. Leave empty ("") if broad.
+3. "type": choose the ONE type that best fits the actual nature of the change, not just the most common one:
+   - "feat": a new feature or capability that did not exist before
+   - "fix": a bug fix, correcting incorrect behavior
+   - "refactor": restructuring or renaming code with NO change in behavior
+   - "docs": documentation only (README, comments, docstrings)
+   - "test": adding or modifying tests only
+   - "chore": maintenance, tooling, config, dependencies, build scripts
+   - "style": formatting, whitespace, or naming changes with no logic change
+   - "perf": a change specifically made to improve performance
+   Do not default to "feat" or "fix" out of habit, pick the type that actually matches the diff.
+4. "scope": ONE single word or short noun naming the module/component affected (e.g. "cli", "auth", "parser"). NEVER list multiple files, NEVER use "and", commas, slashes, or file extensions (e.g. ".py"). Leave empty ("") if the change spans multiple unrelated areas.
 5. "description": MUST be a short, descriptive phrase starting with an imperative verb (e.g., "add support for user login", NOT just a single word like "add" or "update").
 6. "description": MUST NOT have trailing punctuation (no periods or semicolons at the end). MUST be 5-9 words long, this is a hard limit, not a suggestion.
 7. "body": 1-3 short bullet points explaining WHY the change was made, or an empty string ("").
@@ -46,8 +69,30 @@ Output:
   "description": "resolve timeout crash in client module",
   "body": ""
 }}
+
+Input changes: renamed variables and reorganized helper functions in utils.py, no behavior change
+Output:
+{{
+  "reasoning": "pure code reorganization for clarity, no functional change",
+  "type": "refactor",
+  "scope": "utils",
+  "description": "reorganize helper functions for clarity",
+  "body": ""
+}}
+
+Input changes: updated CI workflow yaml and bumped dependency versions
+Output:
+{{
+  "reasoning": "routine maintenance of build tooling and dependencies",
+  "type": "chore",
+  "scope": "ci",
+  "description": "update workflow config and bump dependencies",
+  "body": ""
+}}
 [END OF EXAMPLES]
-Before writing your answer, briefly consider each changed file listed above individually.
+
+Before writing your answer, briefly consider each changed file listed above individually. Then write ONE summary that reflects meaningful changes across ALL of them, not just the last file.
+
 CHANGED FILES:
 {file_list}
 
@@ -122,14 +167,23 @@ def parse_model_response(cleaned: str) -> dict:
 def assemble_commit_message(data: dict) -> str:
     """
     Builds the final 'type(scope): description' string (plus optional body)
-    from the parsed JSON dict. Pure string formatting, no LLM involved.
+    from the parsed JSON dict. Drops the scope entirely if it looks like
+    multiple joined items (bad content), or if including it would push the
+    subject line past 80 characters (length backstop).
     """
     commit_type = data["type"]
     scope = data.get("scope", "").strip()
     description = data["description"].strip()
     body = data.get("body", "").strip()
 
+    if scope and _is_bad_scope(scope):
+        scope = ""
+
     header = f"{commit_type}({scope}): {description}" if scope else f"{commit_type}: {description}"
+
+    if len(header) > 80 and scope:
+        scope = ""
+        header = f"{commit_type}: {description}"
 
     if body:
         return f"{header}\n\n{body}"
